@@ -2,40 +2,76 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QA Flask App</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Question Answering</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body class="bg-light">
-
     <div class="container mt-5">
-        <div class="card shadow-lg p-4">
-            <h2 class="text-center text-primary">Question Answering Model</h2>
-
-            <form method="POST" class="mt-4">
-                <div class="mb-3">
-                    <label class="form-label"><strong>Context:</strong></label>
-                    <textarea name="context" class="form-control" rows="4" placeholder="Enter the context here..." required></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label"><strong>Question:</strong></label>
-                    <input type="text" name="question" class="form-control" placeholder="Enter your question..." required>
-                </div>
-
-                <button type="submit" class="btn btn-primary w-100">Get Answer</button>
-            </form>
-
-            {% if answer %}
-                <div class="alert alert-success mt-4">
-                    <strong>Answer:</strong> {{ answer }}
-                </div>
-            {% endif %}
+        <h2 class="text-center">Question Answering</h2>
+        
+        <div class="form-group mt-4">
+            <label for="model">Select Model:</label>
+            <select id="model" class="form-select">
+                <option value="distilbert">DistilBERT (Fastest)</option>
+                <option value="bert">BERT Large (More Accurate)</option>
+                <option value="roberta">RoBERTa (Handles No Answer)</option>
+            </select>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="context">Context:</label>
+            <textarea id="context" class="form-control" rows="4" placeholder="Enter the context..."></textarea>
+        </div>
+        
+        <div class="form-group mt-3">
+            <label for="question">Question:</label>
+            <div class="input-group">
+                <input type="text" id="question" class="form-control" placeholder="Ask a question...">
+                <button id="record-btn" class="btn btn-outline-secondary">🎤</button>
+            </div>
+        </div>
+        
+        <button id="ask-btn" class="btn btn-primary mt-3">Get Answer</button>
+        
+        <div class="mt-4 d-none" id="answer-box">
+            <h5>Answer:</h5>
+            <p id="answer" class="alert alert-info"></p>
+            <p id="confidence" class="text-muted"></p>
         </div>
     </div>
+    
+    <script>
+        let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.onresult = function(event) {
+            document.getElementById("question").value = event.results[0][0].transcript;
+        };
+        document.getElementById("record-btn").onclick = function() {
+            recognition.start();
+        };
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        $("#ask-btn").click(function() {
+            let question = $("#question").val();
+            let context = $("#context").val();
+            let model = $("#model").val();
+
+            $.ajax({
+                url: "/get_answer",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ question: question, context: context, model: model }),
+                success: function(response) {
+                    $("#answer").text(response.answer);
+                    $("#confidence").text("Confidence: " + response.confidence + "%");
+                    $("#answer-box").removeClass("d-none");
+                },
+                error: function() {
+                    $("#answer").text("Error getting the answer. Please try again.");
+                    $("#answer-box").removeClass("d-none");
+                }
+            });
+        });
+    </script>
 </body>
 </html>
